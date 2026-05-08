@@ -207,7 +207,8 @@ body { font-family: 'Pretendard', -apple-system, sans-serif; color: var(--ink); 
   </div>
   <div class="flex items-center gap-4">
     <div id="syncStatus" class="text-[12px] font-bold text-slate-400 flex items-center gap-2">
-      <div class="w-2 h-2 rounded-full bg-emerald-500" id="syncDot"></div> 시스템 준비 완료
+      <div class="w-2 h-2 rounded-full bg-emerald-500" id="syncDot"></div>
+      <span id="syncStatusText">시스템 준비 완료</span>
     </div>
     <button class="btn-save-manual" onclick="commitToCloud()">
       <span class="ms text-[18px]">cloud_upload</span> DB 업로드
@@ -568,7 +569,7 @@ function commitToCloud() {
   
   window.isSaving = true;
   document.getElementById('syncDot').className = 'w-2 h-2 rounded-full bg-blue-500 animate-ping';
-  document.getElementById('syncStatus').innerHTML = `<div class="w-2 h-2 rounded-full bg-blue-500 animate-ping"></div> 동기화 중...`;
+  document.getElementById('syncStatusText').textContent = '동기화 중...';
   
   document.getElementById('hidden_form').action = A_URL;
   document.getElementById('hidden_form').submit();
@@ -577,7 +578,7 @@ function commitToCloud() {
 function onSaveSuccess() {
   window.isSaving = false;
   document.getElementById('syncDot').className = 'w-2 h-2 rounded-full bg-emerald-500';
-  document.getElementById('syncStatus').innerHTML = `<div class="w-2 h-2 rounded-full bg-emerald-500"></div> 시스템 준비 완료`;
+  document.getElementById('syncStatusText').textContent = '시스템 준비 완료';
   showToast("모든 데이터가 DB에 완벽히 동기화되었습니다.");
 }
 
