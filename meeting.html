@@ -83,6 +83,10 @@ body { font-family: 'Pretendard', -apple-system, sans-serif; color: var(--ink); 
 .btn-primary:hover { background: #374151; transform: translateY(-2px); }
 .btn-stt { background: #f1f5f9; color: var(--ink); border: 1px solid #e2e8f0; padding: 16px; border-radius: 16px; font-size: 14px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
 .btn-stt:hover { background: #e2e8f0; border-color: #cbd5e1; }
+.btn-save-only { display: flex; align-items: center; gap: 8px; background: #f8fafc; color: var(--ink); padding: 14px 28px; border-radius: 14px; font-size: 14px; font-weight: 800; cursor: pointer; border: 1.5px solid #e2e8f0; transition: 0.2s; }
+.btn-save-only:hover { background: #f1f5f9; border-color: #cbd5e1; transform: translateY(-1px); }
+.btn-save-only .save-indicator { width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: none; flex-shrink: 0; }
+.btn-save-only.saved .save-indicator { display: inline-block; }
 
 #toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: #1f2937; color: #fff; padding: 12px 28px; border-radius: 99px; font-size: 13px; font-weight: 800; opacity: 0; transition: all 0.4s; z-index: 10000; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(10px); }
@@ -284,8 +288,15 @@ body { font-family: 'Pretendard', -apple-system, sans-serif; color: var(--ink); 
       </button>
     </div>
 
-    <div class="flex justify-end mt-4 border-t border-slate-100 pt-8">
-      <button class="btn-primary" onclick="saveMeeting()">회의록 저장 및 동기화</button>
+    <div class="flex justify-between items-center mt-4 border-t border-slate-100 pt-6">
+      <button class="btn-save-only" id="btnSaveOnly" onclick="saveOnly()">
+        <span class="ms text-[18px]">save</span>
+        <span>저장</span>
+        <span class="save-indicator"></span>
+      </button>
+      <button class="btn-primary flex items-center gap-2" onclick="saveMeeting()">
+        <span class="ms text-[18px]">check_circle</span> 저장 후 목록으로
+      </button>
     </div>
   </div>
 </main>
@@ -485,34 +496,53 @@ function closeEditor() {
   document.getElementById('viewList').style.display = 'flex';
 }
 
-function saveMeeting() {
+/* 에디터 데이터 수집 (공통) */
+function collectEditorData() {
   const id = document.getElementById('edId').value || 'm_' + Date.now();
-  
+  document.getElementById('edId').value = id; // 신규일 경우 id 확정
   let inList = [];
   document.querySelectorAll('.mem-chk:checked').forEach(cb => inList.push(cb.value));
-  let ext = document.getElementById('edExt').value.trim();
-  let pStr = `[내부] ${inList.join(', ')} | [외부] ${ext}`;
-  
-  const mData = {
-    id: id,
-    date: document.getElementById('edDate').value,
-    project_id: document.getElementById('edProj').value,
-    title: document.getElementById('edTitle').value.trim(),
-    participants: pStr,
-    note: document.getElementById('edNote').value.replace(/\n/g, '↵'),
-    actions: document.getElementById('edActions').value.replace(/\n/g, '↵'),
-    transcript: document.getElementById('edTrans').value.replace(/\n/g, '↵')
+  const ext  = document.getElementById('edExt').value.trim();
+  return {
+    id,
+    date:         document.getElementById('edDate').value,
+    project_id:   document.getElementById('edProj').value,
+    title:        document.getElementById('edTitle').value.trim(),
+    participants: `[내부] ${inList.join(', ')} | [외부] ${ext}`,
+    note:         document.getElementById('edNote').value.replace(/\n/g, '↵'),
+    actions:      document.getElementById('edActions').value.replace(/\n/g, '↵'),
+    transcript:   document.getElementById('edTrans').value.replace(/\n/g, '↵')
   };
+}
 
+/* 저장만 (에디터 유지) */
+function saveOnly() {
+  const mData = collectEditorData();
   if(!mData.title) { alert('회의 제목을 입력해주세요.'); return; }
 
-  const idx = meetings.findIndex(x => String(x.id || x.ID) === String(id));
+  const idx = meetings.findIndex(x => String(x.id || x.ID) === String(mData.id));
   if(idx > -1) meetings[idx] = mData;
   else meetings.push(mData);
 
-  closeEditor(); 
+  commitToCloud();
+
+  // 저장 완료 시각적 피드백
+  const btn = document.getElementById('btnSaveOnly');
+  btn.classList.add('saved');
+  setTimeout(() => btn.classList.remove('saved'), 2500);
+}
+
+/* 저장 + 목록으로 */
+function saveMeeting() {
+  const mData = collectEditorData();
+  if(!mData.title) { alert('회의 제목을 입력해주세요.'); return; }
+
+  const idx = meetings.findIndex(x => String(x.id || x.ID) === String(mData.id));
+  if(idx > -1) meetings[idx] = mData;
+  else meetings.push(mData);
+
+  closeEditor();
   renderList();
-  
   commitToCloud();
 }
 
@@ -587,6 +617,17 @@ function showToast(m) {
   t.textContent = m; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
 }
+
+/* Ctrl+S / Cmd+S → 저장만 */
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    const editorVisible = document.getElementById('viewEditor').style.display !== 'none';
+    if (editorVisible) {
+      e.preventDefault();
+      saveOnly();
+    }
+  }
+});
 </script>
 </body>
 </html>
